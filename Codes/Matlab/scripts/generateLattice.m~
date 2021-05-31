@@ -1,0 +1,152 @@
+clear all;
+close all;
+
+route = '../../..';
+addpath(genpath(route));
+
+dirLattices = [route '/Data/lattices/'];
+
+
+%% PARAMETERS
+
+%randomness
+p = 0.85;                   %percolation parameter
+dk = 0;                     %spring constant disorder
+strain = 0.2;               %strain
+a = 1;                      %length at rest of springs
+nNN = 4;                    %number of neighbours. Needs to be 4 or 8
+
+%lattice parameters
+L = 50*[1 1];               %size (Ly,Lx) of the sample
+LAbsLayer = 250;            %length of the absorbing layer
+Lbuffer = 50;               %length of the buffer
+LtotLayer = LAbsLayer + Lbuffer;
+
+%lattice relaxation
+
+dispThreshold = 10^-5;      
+strainStep = strain/5;
+quasistaticDispThre = 0.05;
+
+%nb samples
+nSamples = 1;
+prefixSample = '21';
+
+%Modes
+f = 1/2;
+c = 2*pi*sqrt(strain/(1+strain));
+omega = 2*pi*f;
+nc = 2*(L(1)-1)/pi*asin(omega/(2*c));
+
+%DISPLAY PARAM
+fprintf('p = %1.2f - dk = %1.2f\n',p,dk);
+disp(['Sample size = ' num2str(L) ]);
+disp(['Size buffer = ' num2str(Lbuffer)]);
+disp(['Size absorbing layer = ' num2str(LAbsLayer)]);
+fprintf('nc = %1.2f\n',nc);
+
+%%
+
+nPool = 10;
+if nSamples >= 10
+    try parpool(nPool)
+    catch
+    end
+end
+
+
+%% SAVE
+
+fileName = sprintf('lattice_p%d%%dk%d%%L%dstrain%d%%springL%d%%',100*p,uint16(100*dk),L(1),100*strain,round(100*a));
+subDir = [dirLattices fileName '/'];
+createDir(subDir);
+
+U0all = cell(nSamples,1);
+paramLatticeAll = cell(nSamples,1);
+
+%%
+for indSample = 1:nSamples
+
+    
+    %% GENERATE RANDOM LATTICE
+
+    fprintf('\nGENERATE RANDOM LATTICE\n');
+    tic;
+    [U0, paramLattice, EtotVSt] = randLattice(L,Lbuffer,LAbsLayer,p,dk,nNN,strain,a,dispThreshold,quasistaticDispThre,strainStep);
+    toc;
+
+    paramLatticeAll{indSample} = paramLattice;
+    U0all{indSample} = U0;
+
+end
+
+%%
+disp('SAVE');
+for indSample = 1:nSamples
+    
+    U0 = U0all{indSample};
+    paramLattice = paramLatticeAll{indSample};
+    
+    indFile = 1;
+    fileId = num2str(indFile,'%03d');
+    fileId = [num2str(prefixSample,'%02d') fileId];
+    filePath = [subDir fileName '_' fileId '.mat'];
+    while exist(filePath,'file')
+        indFile = indFile + 1;
+        fileId = num2str(indFile,'%03d');
+        fileId = [num2str(prefixSample,'%02d') fileId];
+	filePath = [subDir fileName '_' fileId '.mat'];
+    end
+
+    paramLattice.indSample = indFile;
+    fprintf('file nb %d\n',indFile);
+    save(filePath,'U0','paramLattice');
+    
+end
+
+disp('END');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
